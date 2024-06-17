@@ -1,0 +1,15 @@
+fastapi
+pymongo
+uvicorn
+python-telegram-bot
+python-dotenv
+requests 
+subprocess.run
+pydantic
+asyncio
+openai
+passlib
+python-jose
+google-generativeai
+Pillow
+ipython
