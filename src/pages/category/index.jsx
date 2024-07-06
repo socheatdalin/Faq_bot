@@ -2,35 +2,26 @@ import React, { useEffect, useState } from "react"
 import { Flex, Box, Card, Typography } from '@mui/joy'
 import { List, ListItem } from "@material-tailwind/react";
 import axios from "axios";
-import { PresentationChartBarIcon, TrashIcon } from "@heroicons/react/24/solid";
+import { TrashIcon, PencilSquareIcon } from "@heroicons/react/24/solid";
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { useNavigate } from 'react-router-dom';
+import categoryService from "../../service/category";
 
 export default function Category() {
 
     const [loading, setLoading] = useState([])
     const [category, setCategory] = useState([])
     const [openCategory, setopenCategory] = useState(false);
+    const [openUpdateCategory, setOpenUpdateCategory] = useState(false);
     const [show, setShow] = useState(false);
-    const [openSubcategory, setOpenSubcategory] = useState(false);
     const [categoryName, setCategoryname] = useState("");
-    const [subcategoryName, setSubcategoryname] = useState("");
+    const [newCategoryName, setNewCategoryName] = useState('')
+    const [selectCategory, setSelectCategory] = useState('')
+    const [response, setResponse] = useState(null);
     const [message, setMessage] = useState("");
-    const [categoryCount, setCategoryCount] = useState(null);
-    const [question, setQuestion] = useState('')
-    const [answer, setAnswer] = useState('')
-    const [subcategory, setSubcategory] = useState([])
-    const [selectedCategory, setSelectedCategory] = useState('');
-    const [selectedSubcategory, setSelectedSubcategory] = useState('');
-    const [file, setFile] = useState(null);
-
 
     const navigate = useNavigate();
-
-    const handleFileChange = (e) => {
-        setFile(e.target.files[0])
-    };
 
     const openDialog = () => {
         setShow(true);
@@ -39,7 +30,14 @@ export default function Category() {
     const closeDialog = () => {
         setShow(false);
     };
+    const OpenUpdateCategory = () => {
+        setOpenUpdateCategory(true);
+    };
 
+    const closeUpdateCategory = () => {
+        setOpenUpdateCategory(false);
+        setMessage('');
+    };
     const openDialogCategory = () => {
         setopenCategory(true);
     };
@@ -48,29 +46,11 @@ export default function Category() {
         setopenCategory(false);
         setMessage('');
     };
-    const openDialogSubcategory = () => {
-        setOpenSubcategory(true);
-    };
-
-    const closeDialogSubcategory = () => {
-        setOpenSubcategory(false);
-        setMessage('');
-    };
-    const get_category_count = async () => {
-        try {
-            const response = await axios.get("http://127.0.0.1:8000/count-category");
-            setCategoryCount(response.data);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
-    }
 
     const get_category = async () => {
         try {
-            const response = await axios.get("http://127.0.0.1:8000/find_category");
-            setCategory(response.data);
+            const response = await categoryService.getCategory()
+            setCategory(response);
 
         } catch (error) {
             console.error(error);
@@ -79,27 +59,12 @@ export default function Category() {
         }
     }
 
-    const get_subcategory = async (categoryItem) => {
-        try {
-            const response = await axios.get(`http://127.0.0.1:8000/find_subcategory/${categoryItem}`);
-            setSubcategory(prev => ({
-                ...prev,
-                [categoryItem]: response.data
-            }));
-            console.log(subcategory)
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
-    }
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const res = await axios.post('http://127.0.0.1:8000/categories/', {
-                category_name: categoryName,
-            });
+            await categoryService.create(categoryName)
+            setCategoryname('')
             get_category()
             closeDialogCategory();
         } catch (error) {
@@ -111,116 +76,81 @@ export default function Category() {
         }
     }
 
-    const handleCreateSubcategory = async (e) => {
-        e.preventDefault();
+
+    const handleDelete = async (category_name) => {
         try {
-            await axios.post(`http://127.0.0.1:8000/categories/${selectedCategory}/subcategories/ `, {
-                subcategory_name: subcategoryName,
-            });
-            get_subcategory()
-            closeDialogSubcategory();
-        } catch (error) {
-            if (error.response) {
-                setMessage(`Error: ${error.response.data.detail}`);
-            } else {
-                setMessage("An error occurred");
-            }
-        }
-    }
-
-    const handleCreateQuestion = async (e) => {
-        e.preventDefault();
-
-        const formData = new FormData();
-        formData.append('question', question);
-        formData.append('answer', answer);
-        if (file) {
-            formData.append('file', file);
-        }
-
-        try {
-            await axios.post(`http://127.0.0.1:8000/categories/${selectedCategory}/subcategories/${selectedSubcategory}/questions/`, formData,
-                {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                    },
-                });
-            closeDialog();
+            await categoryService.deleteCategory(category_name)
+            closeDialog()
+            get_category()
 
         } catch (error) {
-            console.error('Error uploading question:', error);
+            console.error('Error deleting items:', error);
         }
+
+    };
+
+    const handleClickUpdate = (category) => {
+        setSelectCategory(category)
+        setNewCategoryName(category)
+        setOpenUpdateCategory(true);
     }
 
-    // const handleDelete = async (category_name) => {
-    //     try {
-    //         await axios.delete(`/category/${category_name}`)
-    //         get_category()
-    //         if (!response.ok) {
-    //             const error = await response.json();
-    //             throw new Error(error.detail || 'Failed to delete category');
-    //         }
+    const handleUpdateCategory = async (e) => {
+        e.preventDefault();
 
-    //         return response.json();
-    //     } catch (error) {
-    //         console.error('Error deleting items:', error);
-    //     }
-
-    // };
+        try {
+            const category = { category_name: newCategoryName }
+            const response = await categoryService.update(selectCategory, category);
+            setMessage(response.message);
+            closeUpdateCategory()
+            get_category()
+            // console.log("Category updated:", updatedCategory);
+        } catch (error) {
+            console.error("Error updating category:", error.message);
+        }
+    }
 
     useEffect(() => {
         get_category()
-        get_category_count()
 
     }, [])
 
-    useEffect(() => {
-        if (selectedCategory) {
-            get_subcategory(selectedCategory);
-        }
-    }, [selectedCategory]);
-
     return (
-        <div className="w-full m-8">
+        <div className="w-full  ">
             {/* category */}
-            <Button label="Create Question" icon="pi pi-external-link" onClick={openDialog} className="w-fit bg-blue-300 p-1.5 rounded-lg" />
-            <Card className="m-2 overflow-auto">
-                <div className="flex gap-5 justify-between">
+            <div className=" m-5 flex justify-end">
+                <Button label="Create category" icon="pi pi-external-link" onClick={openDialogCategory} className="w-fit bg-blue-300 p-1.5 rounded-lg" />
+            </div>
+            <div className="m-2 bg-gray-100 p-2 rounded-xl h-[570px] px-5">
+                <div className="flex gap-5 justify-between my-3">
                     <h1 className="text-lg font-semibold">Category</h1>
-                    <Button label="Create category" icon="pi pi-external-link" onClick={openDialogCategory} className="w-fit bg-blue-300 p-1.5 rounded-lg" />
                 </div>
                 <div className="">
                     {category.map((item, index) => (
                         <div className=" flex justify-between py-1 ">
-                            <ul className=" list-disc mx-12">
-                                <li>{item}</li>
+                            <ul className=" list-disc mx-12" key={item}>
+                                <li >{item}</li>
                             </ul>
-                            {/* <button className=' p-2 rounded-xl' onClick={() => handleDelete(item)}><TrashIcon className="h-5 w-5" /></button> */}
+                            <div className="flex gap-2">
+                                <button className='text-red-700 ' onClick={() => handleClickUpdate(item)}><PencilSquareIcon className="h-5 w-5" /></button>
+                                <button className='text-red-500' onClick={openDialog}><TrashIcon className="h-5 w-5" /></button>
+                            </div>
+                            {/* delete */}
+                            <Dialog visible={show} onHide={() => setShow(false)} className="bg-gray-200 p-3 w-96  rounded-lg">
+                                <h1 className=" font-bold text-center text-xl text-red-600">Delete </h1>
+                                <p className=" text-center my-2">Are you sure you want to delete?</p>
+                                <div className="flex gap-5 justify-center my-3 *:bg-blue-200 *:p-2 *:rounded-lg">
+                                    <button className="" onClick={closeDialog}>Cancel</button>
+                                    <button onClick={() => handleDelete(item)}>Delete</button>
+                                </div>
+                            </Dialog>
+                            {/* edit */}
+
                         </div>
                     ))}
                 </div>
-            </Card>
-            {/* subcategory */}
-            <Card className="m-2 overflow-auto h-80  ">
-                <div className="flex gap-5 justify-between">
-                    <h1 className="text-lg font-semibold">Subcategory</h1>
-                    <Button label="Create" icon="pi pi-external-link" onClick={openDialogSubcategory} className="w-fit bg-blue-300 p-1.5 rounded-lg" />
-                </div>
-                {category.map((item, index) => (
-                    <div key={`category-${index}`} className="px-4">
-                        <h1 className="py-2 font-semibold ">{item.toUpperCase()}</h1>
-                        {subcategory[item] && subcategory[item].map((subItem, subIndex) => (
-                            <div key={`subcategory-${subIndex}`} className="mx-5">
-                                <ul className="list-disc flex justify-between p-1">
-                                    <li className="">{subItem}</li>
-                                    <button className=' p-2 rounded-xl bg-blue-100'  ><TrashIcon className="h-5 w-5" /></button>
-                                </ul>
-                            </div>
-                        ))}
-                    </div>
-                ))}
+            </div>
 
-            </Card>
             {/* dialog catgory*/}
             <div className="">
                 <Dialog className="bg-gray-200 p-3 w-96  rounded-lg" visible={openCategory} onHide={() => setopenCategory(false)}>
@@ -231,7 +161,7 @@ export default function Category() {
                                 name="category"
                                 type="text"
                                 value={categoryName}
-                                onChange={(e) => setCategoryname(e.target.value)}
+                                onChange={(e) => setCategoryname(e.target.value.replace(/ /g, '_'))}
                                 placeholder="please input category"
                                 label="category"
                                 className="w-80 p-2 m-2 rounded-lg outline outline-2 outline-gray-500"
@@ -243,83 +173,30 @@ export default function Category() {
                     </div>
                 </Dialog>
             </div>
-            {/* dialog Subcatgory*/}
+
+            {/* edit */}
+
             <div className="">
-                <Dialog className="bg-gray-200 p-3 w-96  rounded-lg" visible={openSubcategory} onHide={() => setOpenSubcategory(false)}>
+                <Dialog className="bg-gray-200 p-3 w-96  rounded-lg" visible={openUpdateCategory} onHide={() => setOpenUpdateCategory(false)}>
                     <div className="grid *:my-2 ">
-                        <h1 className="font-bold text-2xl ">Create Subacatgory</h1>
-                        <form action="" onSubmit={handleCreateSubcategory} className="">
-                            <select
-                                name="category"
-                                id=""
-                                className="p-3 m-2 rounded-lg outline outline-2 outline-gray-500 w-80 "
-                                onChange={(e) => setSelectedCategory(e.target.value)}
-                                value={selectedCategory}
-                            >
-                                <option value="">Select a category</option>
-                                {category.map((item, index) => (
-                                    <option value={item} key={index}>{item}</option>
-                                ))}
-                            </select>
+                        <h1 className="font-bold text-2xl ">Update Catgeory</h1>
+                        <form action="" onSubmit={handleUpdateCategory} className="">
                             <input
                                 name="category"
                                 type="text"
-                                value={subcategoryName}
-                                onChange={(e) => setSubcategoryname(e.target.value)}
+                                value={newCategoryName}
+                                onChange={(e) => setNewCategoryName(e.target.value)}
                                 placeholder="please input category"
-                                label="subcategory"
+                                label="category"
                                 className="w-80 p-2 m-2 rounded-lg outline outline-2 outline-gray-500"
                             />
                             <div className="flex justify-center w-82 bg-blue-300 rounded-lg p-2 m-2">
-                                <button type="submit">Create</button>
+                                <button type="submit">Update</button>
                             </div>
                         </form>
                     </div>
                 </Dialog>
             </div>
-            {/* question */}
-            <Dialog className="bg-gray-200 p-3 w-96 " visible={show} onHide={() => setShow(false)}>
-                <div className="grid *:my-2 ">
-                    <h1 className="font-bold text-2xl ">Create Question</h1>
-                    <form action="" onSubmit={handleCreateQuestion} className=" ">
-                        <input type="text" name="question" id="" value={question} placeholder="please input question " label="question" className="w-80 p-2 m-2 rounded-lg outline outline-2 outline-gray-500" onChange={(e) => setQuestion(e.target.value)} />
-                        <input type="text" name="answer" id="" value={answer} placeholder="please input answer " label="Answer" className="w-80 p-2 m-2 rounded-lg outline outline-2 outline-gray-500" onChange={(e) => setAnswer(e.target.value)} />
-                        <select
-                            name="category"
-                            id=""
-                            className="p-3 m-2 rounded-lg outline outline-2 outline-gray-500 w-80 "
-                            onChange={(e) => setSelectedCategory(e.target.value)}
-                            value={selectedCategory}
-                        >
-                            <option value="">Select a category</option>
-                            {category.map((item, index) => (
-                                <option value={item} key={index}>{item}</option>
-                            ))}
-                        </select>
-
-                        {/* Subcategory dropdown */}
-                        {selectedCategory && subcategory[selectedCategory] && (
-                            <select
-                                name="subcategory"
-                                id=""
-                                className="p-3 m-2 rounded-lg outline outline-2 outline-gray-500 w-80 "
-                                onChange={(e) => setSelectedSubcategory(e.target.value)}
-                                value={selectedSubcategory}
-                            >
-                                <option value="">Select a subcategory</option>
-                                {subcategory[selectedCategory].map((item, index) => (
-                                    <option value={item} key={index} >{item}</option>
-                                ))}
-                            </select>
-                        )}
-                        <input type="file" name="file" id="" onChange={handleFileChange} className="p-2 rounded-lg" />
-                        <div className="flex justify-center w-full bg-blue-300 rounded-lg p-2">
-                            <button type="submit" className="  ">Create</button>
-                        </div>
-
-                    </form>
-                </div>
-            </Dialog>
         </div >
     )
 

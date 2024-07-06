@@ -1,30 +1,45 @@
 
-import React, { useContext, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthContext, AuthProvider } from "./pages/auth/authcontext";
+import React, { useContext, useState,useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from "./pages/auth/Login";
 import Dashboard from "./pages/dashboard/dashboard";
 import Library from "./pages/content/Library";
 import Category from "./pages/category/index";
 import Sidebar from "./components/common/sidebar";
-import { isAdminLoggedIn } from './utils/auth';
-import PrivateRoute from './utils/privateRoute';
-import Router from "./routes/index"
+import Subcategory from "./pages/subcategory/index"
+
 function App() {
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
- 
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      setIsAuthenticated(true);
+    }
+    
+  }, []);
   
   return (
     
-      <div className="flex overflow-hidden ">
-            {isAuthenticated && <Sidebar />}
+      <div className="flex overflow-hidden h-fit">
+        {isAuthenticated ? (
+        <>
+          <Sidebar />
           <Routes>
-            <Route path="/" element={<Login setIsAuthenticated={setIsAuthenticated} />} />
-            <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/" />} />
-                <Route path="/category" element={isAuthenticated ? <Category /> : <Navigate to="/" />} />
-                <Route path="/:category_name/:subcategory_name" element={isAuthenticated ? <Library /> : <Navigate to="/" />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/category" element={<Category />} />
+            <Route path="/subcategory" element={<Subcategory />} />
+            <Route path="/:category_name/:subcategory_name" element={<Library />} />
+            {/* <Route path="*" element={<Navigate to="/dashboard" />} /> */}
           </Routes>
+        </>
+      ) : (
+        <Routes>
+          <Route path="/" element={<Login setIsAuthenticated={setIsAuthenticated} />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      )}
          
       </div>
       

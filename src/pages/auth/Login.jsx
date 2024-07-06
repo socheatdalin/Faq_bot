@@ -1,45 +1,32 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { AuthContext } from '../auth/authcontext';
 
-const Login = ({ setIsAuthenticated }) => {
+
+const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [token, setToken] = useState(null);
-    const [error, setError] = useState('');
     const navigate = useNavigate();
-    // const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-    // const handleSubmit = async (e) => {
-    //     e.preventDefault();
-    //     try {
-    //         const formData = new URLSearchParams();
-    //         formData.append('username', email);
-    //         formData.append('password', password);
-    //         const response = await axios.post('http://127.0.0.1:8000/login', formData, {
-    //             headers: {
-    //                 'Content-Type': 'application/x-www-form-urlencoded',
-    //             },
-    //         });
-    //         console.log(response.data)
-    //         setToken(response.data.access_token);
-    //         // setIsAuthenticated(true);
-    //         console.log('Navigating to dashboard...');
-    //         navigate('/dashboard');
-
-    //     } catch (error) {
-    //         console.error('Login failed', error);
-    //     }
-    // };
-
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (email === 'admin@gmail.com' && password === 'admin') {
-            setIsAuthenticated(true);
+        try {
+            const formData = new URLSearchParams();
+            formData.append('username', email);
+            formData.append('password', password);
+            const response = await axios.post('http://127.0.0.1:8000/login', formData, {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+            });
+            localStorage.setItem('token', response.data.access_token);
+            console.log('Login successful:', response.data);
             navigate('/dashboard');
-        } else {
-            alert('Invalid credentials');
+            window.location.reload();
+            // window.replace("/dashboard");
+
+        } catch (error) {
+            console.error('Login failed', error);
         }
     };
 
