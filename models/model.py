@@ -19,4 +19,15 @@ class Category(BaseModel):
     category_name: str
     subcategories: Optional[List[Subcategory]] = []
 
+#dupdate model
+class updateCategory(BaseModel):
+    category_name: Optional[str] = None
+
+class updateSubcategory(BaseModel):
+    subcategory_name: Optional[str] = None
+    
+class updateQuestion(BaseModel):
+    question:str = None
+    answer:str =None
+    image:str = None
 

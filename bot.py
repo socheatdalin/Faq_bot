@@ -13,29 +13,13 @@ DATABASE = os.getenv('DATABASE_CONNECTION')
 TOKEN = os.getenv('TOKEN')
 BOT_USERNAME = os.getenv('BOT_USERNAME')
 
-from doc_bot.list_library import start,button,list_subcategory,list_qa
+from config.db import faq_db
+from doc_bot.list_library import start,button,list_subcategory, subcategory_command, category_command
+from webhook import webhook
 from gemini import chat
 
-async def library_command(update, context):
-    await list_subcategory(update, context, "libraries")
+# webhook()
 
-async def school_command(update, context):
-    await list_subcategory(update, context, "school")
-
-    
-async def room_question(update, context):
-    await list_qa(update, context, "room")
-async def library_question(update, context):
-    await list_qa(update, context, "library")
-async def school_question(update, context):
-    await list_qa(update, context, "building")
-async def school_question(update, context):
-    await list_qa(update, context, "book")
-async def school_question(update, context):
-    await list_qa(update, context, "service")
-async def school_question(update, context):
-    await list_qa(update, context, "department")
-    
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -86,21 +70,29 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print(f'Update {update} caused error {context.error}')
 
-
 def main():
     application = Application.builder().token(TOKEN).read_timeout(30).write_timeout(30).build()
     print('starting bot ')
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("libraries", library_command))
-    application.add_handler(CommandHandler("school", school_command))
-    application.add_handler(CommandHandler("room", room_question))
-    application.add_handler(CommandHandler("library", library_question))
-    application.add_handler(CommandHandler("school", school_question))
+    
+    categories = faq_db.find()
+    # Create a command handler for each category and its subcategories
+    for category in categories:
+        category_name = category["category_name"]
+        application.add_handler(CommandHandler(category_name, category_command))
+
+        if "subcategories" in category and isinstance(category["subcategories"], list):
+            for subcategory in category["subcategories"]:
+                subcategory_name = subcategory.get("subcategory_name")
+                if subcategory_name:  
+                    application.add_handler(CommandHandler(subcategory_name, subcategory_command))
+                    
     application.add_handler(CallbackQueryHandler(button))
     application.add_handler(MessageHandler(filters.TEXT, handle_message))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
     application.run_polling()
+
 
 if __name__ == "__main__":
     main()
